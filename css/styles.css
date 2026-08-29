@@ -315,6 +315,7 @@ a  { color:var(--cyan); text-decoration:none; }
   border:1px solid var(--border-0);
   border-radius:var(--r-lg); padding:20px;
   transition:all var(--transition);
+  min-width:0;
 }
 .kpi:hover { transform:translateY(-2px); border-color:var(--border-1); }
 
@@ -322,11 +323,14 @@ a  { color:var(--cyan); text-decoration:none; }
   position:absolute; top:18px; right:18px;
   width:34px; height:34px; border-radius:10px;
   display:grid; place-items:center;
+  flex-shrink:0;
 }
 .kpi-label {
   font-family:var(--font-mono); font-size:9.5px;
   letter-spacing:.13em; text-transform:uppercase; color:var(--text-2);
   margin-bottom:12px;
+  padding-right:42px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 .kpi-value { font-size:36px; font-weight:700; letter-spacing:-.03em; line-height:1; margin-bottom:8px; }
 .kpi-trend { display:flex; align-items:center; gap:5px; font-size:12px; color:var(--text-2); }
@@ -921,6 +925,14 @@ textarea { resize:vertical; min-height:90px; }
   .license-grid { grid-template-columns:repeat(2,1fr); }
   .dash-grid { grid-template-columns:1fr; }
   .ticket-detail { grid-template-columns:1fr; }
+}
+
+/* Pantallas angostas (ventana a mitad, tablets verticales): KPIs más compactos pero legibles */
+@media (max-width:640px) {
+  .kpi { padding:16px; }
+  .kpi-value { font-size:28px; }
+  .kpi-icon { width:28px; height:28px; top:14px; right:14px; }
+  .kpi-label { padding-right:34px; font-size:9px; }
 }
 
 @media (max-width:768px) {
