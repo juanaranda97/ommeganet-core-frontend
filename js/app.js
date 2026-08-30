@@ -64,7 +64,7 @@ const App = {
 
     async startApp() {
         document.getElementById('auth-view').style.display  = 'none';
-        document.getElementById('app-shell').style.display  = 'grid';
+        document.getElementById('app-shell').style.display  = 'block';
         document.getElementById('app-shell').className      = 'app-shell';
 
         // Cargar contexto multi-tenant
