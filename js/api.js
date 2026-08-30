@@ -65,7 +65,6 @@ class APIClient {
 
             if (resp.status === 401) {
                 this.setToken(null); localStorage.removeItem('user');
-                window.location.reload();
                 throw new Error('Sesión expirada');
             }
 
@@ -102,7 +101,7 @@ class APIClient {
         try {
             const resp = await fetch(url, { method:'POST', headers, body:formData, signal:ctrl.signal });
             clearTimeout(tOut); clearTimeout(wakeT); this._hideWake();
-            if (resp.status === 401) { this.setToken(null); window.location.reload(); throw new Error('Sesión expirada'); }
+            if (resp.status === 401) { this.setToken(null); localStorage.removeItem('user'); throw new Error('Sesión expirada'); }
             const data = await resp.json().catch(() => null);
             if (!resp.ok) throw new Error(data?.detail || `Error ${resp.status}`);
             return data;
