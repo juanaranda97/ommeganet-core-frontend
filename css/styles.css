@@ -961,7 +961,9 @@ textarea { resize:vertical; min-height:90px; }
     box-shadow:0 0 14px var(--violet-g);
   }
   .page-body { padding:20px 16px 80px; }
-  .kpi-grid { grid-template-columns:1fr 1fr; gap:12px; }
+  .kpi-grid { grid-template-columns:1fr 1fr; gap:12px; align-items:stretch; }
+  .kpi { height:auto; min-height:0; align-self:start; }
+  .kpi-value { font-size:28px; }
   .license-grid { grid-template-columns:1fr; }
   .cat-grid { grid-template-columns:repeat(2,1fr); }
   .form-row { grid-template-columns:1fr; }
