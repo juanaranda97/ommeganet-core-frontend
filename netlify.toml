@@ -11,7 +11,7 @@
   to = "/index.html"
   status = 200
 
-# Headers de seguridad
+# Headers de seguridad (aplican a todo)
 [[headers]]
   for = "/*"
   [headers.values]
@@ -20,13 +20,20 @@
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "geolocation=(self), microphone=(self), camera=(self)"
 
-# Cache de assets estáticos
+# El HTML NUNCA se cachea: siempre trae la última versión
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# CSS y JS: revalidar siempre con el servidor antes de usar caché
+# (evita servir versiones viejas tras un deploy)
 [[headers]]
   for = "/css/*"
   [headers.values]
-    Cache-Control = "public, max-age=3600"
+    Cache-Control = "public, max-age=0, must-revalidate"
 
 [[headers]]
   for = "/js/*"
   [headers.values]
-    Cache-Control = "public, max-age=3600"
+    Cache-Control = "public, max-age=0, must-revalidate"
