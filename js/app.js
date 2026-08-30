@@ -20,20 +20,41 @@ const App = {
         const token   = localStorage.getItem('access_token');
         const userStr = localStorage.getItem('user');
         if (token && userStr) {
+            // Mostramos la app de una con los datos guardados (optimista)
             try {
                 this.state.user = JSON.parse(userStr);
                 api.setToken(token);
-                const fresh = await api.getMe();
-                this.state.user = fresh;
-                localStorage.setItem('user', JSON.stringify(fresh));
                 await this.startApp();
-            } catch {
-                this.showAuth();
+            } catch (e) {
+                console.error('startApp error:', e);
             }
+
+            // Validamos el token en segundo plano SIN desloguear por errores de red
+            api.getMe()
+                .then(fresh => {
+                    this.state.user = fresh;
+                    localStorage.setItem('user', JSON.stringify(fresh));
+                    this.updateUserUI();
+                })
+                .catch(err => {
+                    // Solo deslogueamos si el token es inválido (401), no por timeout/red
+                    if (err && err.message && err.message.includes('Sesión expirada')) {
+                        this.logout();
+                    }
+                    // Si es error de red/timeout (Render dormido), mantenemos la sesión
+                });
         } else {
             this.showAuth();
         }
-        document.getElementById('loading-screen').style.display = 'none';
+        const ls = document.getElementById('loading-screen');
+        if (ls) ls.style.display = 'none';
+    },
+
+    logout() {
+        api.setToken(null);
+        localStorage.removeItem('user');
+        localStorage.removeItem('access_token');
+        this.showAuth();
     },
 
     showAuth() {
