@@ -305,8 +305,8 @@
                 <input type="text" id="ticket-title" maxlength="200" placeholder="Ej: No tengo internet">
               </div>
               <div class="form-group">
-                <label>Descripción detallada <span class="req">*</span></label>
-                <textarea id="ticket-desc" rows="5" maxlength="2000" placeholder="¿Qué pasa? ¿Cuándo empezó? ¿Qué intentaste?"></textarea>
+                <label>Descripción <span style="color:var(--text-2); font-weight:400;">(opcional)</span></label>
+                <textarea id="ticket-desc" rows="4" maxlength="2000" placeholder="Opcional: contanos más detalles — ¿cuándo empezó? ¿qué intentaste?"></textarea>
               </div>
               <div class="form-row">
                 <div class="form-group">
@@ -332,6 +332,11 @@
                   <label>Teléfono contacto</label>
                   <input type="tel" id="ticket-phone" placeholder="+595 981 123456">
                 </div>
+              </div>
+              <div class="form-group">
+                <label>CI del solicitante <span class="req">*</span></label>
+                <input type="text" id="ticket-ci" maxlength="20" placeholder="Ej: 1234567">
+                <div class="form-hint" id="ci-hint">Necesario para registrar el ticket</div>
               </div>
               <div class="gps-card">
                 <div><div class="gps-label">📍 Ubicación GPS</div><div class="gps-val" id="gps-val">Detectando...</div></div>
@@ -415,7 +420,7 @@
           <div class="search-bar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input id="search-my" placeholder="Buscar..."></div>
           <select class="filter-select" id="filter-my-status"><option value="">Todos los estados</option><option value="pendiente">Pendiente</option><option value="en_curso">En curso</option><option value="completada">Completada</option></select>
           <select class="filter-select" id="filter-my-priority"><option value="">Todas las prioridades</option><option value="urgente">Urgente</option><option value="alta">Alta</option><option value="media">Media</option><option value="baja">Baja</option></select>
-          <button class="btn btn-ghost btn-sm" onclick="exportCSV(App.state.tickets,'mis_tickets')">↓ Exportar</button>
+          <button class="btn btn-ghost btn-sm" onclick="TicketExport.open('my')">↓ Exportar</button>
         </div>
         <div class="card" style="padding:0;">
           <div class="table-wrap">
@@ -435,7 +440,7 @@
           <select class="filter-select" id="filter-all-status"><option value="">Estados</option><option value="pendiente">Pendiente</option><option value="en_curso">En curso</option><option value="completada">Completada</option></select>
           <select class="filter-select" id="filter-all-priority"><option value="">Prioridades</option><option value="urgente">Urgente</option><option value="alta">Alta</option><option value="media">Media</option><option value="baja">Baja</option></select>
           <select class="filter-select" id="filter-all-sla"><option value="">SLA</option><option value="overdue">Vencidos</option><option value="at_risk">En riesgo</option><option value="on_time">En tiempo</option></select>
-          <button class="btn btn-ghost btn-sm" onclick="exportCSV(App.state.allTickets,'todos_tickets')">↓ Exportar</button>
+          <button class="btn btn-ghost btn-sm" onclick="TicketExport.open('all')">↓ Exportar</button>
         </div>
         <div class="card" style="padding:0;">
           <div class="table-wrap">
@@ -585,16 +590,27 @@
 </div>
 
 <!-- ============ MODAL: SIGNATURE ============ -->
-<div class="modal-overlay" id="modal-signature">
+<div class="modal-overlay" id="modal-close">
   <div class="modal sm">
-    <div class="modal-header"><h2>Firma de cierre</h2><button class="icon-btn" onclick="closeModal('modal-signature')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <div class="modal-header"><h2>Cerrar ticket</h2><button class="icon-btn" onclick="closeModal('modal-close')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
     <div class="modal-body">
-      <p style="font-size:12px;color:var(--text-2);margin-bottom:12px;">Firmá para confirmar el cierre</p>
-      <canvas id="sig-canvas" width="440" height="160"></canvas>
-      <div style="display:flex;gap:10px;margin-top:14px;">
-        <button class="btn btn-ghost btn-full" onclick="SigPad.clear()">Limpiar</button>
-        <button class="btn btn-primary btn-full" onclick="SigPad.save()">Confirmar</button>
+      <div class="form-group">
+        <label>Notas de resolución</label>
+        <textarea id="close-notes" rows="3" placeholder="Ej: Se cambió el cable de red. Equipo funcionando."></textarea>
       </div>
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; margin-bottom:8px;">
+        <input type="checkbox" id="close-with-sig" style="width:auto;" onchange="App.toggleCloseSig()">
+        Agregar firma de conformidad
+      </label>
+      <div id="close-sig-area" style="display:none;">
+        <p style="font-size:12px; color:var(--text-2); margin-bottom:8px;">Firmá en el recuadro:</p>
+        <canvas id="sig-canvas" width="440" height="160"></canvas>
+        <button type="button" class="btn btn-ghost btn-sm btn-full" style="margin-top:8px;" onclick="SigPad.clear()">Limpiar firma</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-close')">Cancelar</button>
+      <button class="btn btn-primary" id="close-confirm-btn" onclick="App.confirmClose()">Cerrar ticket</button>
     </div>
   </div>
 </div>
@@ -678,6 +694,39 @@
   </div>
 </div>
 
+<!-- ============ MODAL: EXPORT TICKETS ============ -->
+<div class="modal-overlay" id="modal-export">
+  <div class="modal sm">
+    <div class="modal-header">
+      <h2>Exportar tickets</h2>
+      <button class="icon-btn" onclick="closeModal('modal-export')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px; color:var(--text-2); margin-bottom:16px;">Elegí el rango de fechas y el formato. Por defecto viene el mes actual.</p>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Desde</label>
+          <input type="date" id="exp-from">
+        </div>
+        <div class="form-group">
+          <label>Hasta</label>
+          <input type="date" id="exp-to">
+        </div>
+      </div>
+      <div style="display:flex; gap:10px; margin-top:8px;">
+        <button class="btn btn-primary btn-full" onclick="TicketExport.toExcel()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Excel
+        </button>
+        <button class="btn btn-ghost btn-full" onclick="TicketExport.toPDF()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          PDF
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ============ WAKE TOAST ============ -->
 <div id="wake-toast"><span class="wake-spinner"></span><span>El servidor está despertando, esperá unos segundos…</span></div>
 
@@ -687,11 +736,15 @@
 <!-- ============ SCRIPTS ============ -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="js/config.js"></script>
 <script src="js/api.js"></script>
 <script src="js/media.js"></script>
 <script src="js/wizard.js"></script>
 <script src="js/organizations.js"></script>
+<script src="js/export.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
