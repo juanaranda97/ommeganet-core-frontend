@@ -404,15 +404,51 @@ const App = {
 
     openClose(ticketId) {
         window._closingTicket = ticketId;
+        document.getElementById('close-notes').value = '';
+        document.getElementById('close-with-sig').checked = false;
+        document.getElementById('close-sig-area').style.display = 'none';
         closeModal('modal-ticket');
-        SigPad.init();
-        openModal('modal-signature');
+        openModal('modal-close');
     },
 
-    async closeWithSig(ticketId, sig) {
-        const notes = prompt('Notas de resolución (opcional):') || 'Resuelto.';
+    toggleCloseSig() {
+        const on = document.getElementById('close-with-sig').checked;
+        const area = document.getElementById('close-sig-area');
+        area.style.display = on ? 'block' : 'none';
+        if (on) setTimeout(() => SigPad.init(), 50);
+    },
+
+    async confirmClose() {
+        const ticketId = window._closingTicket;
+        const notes = document.getElementById('close-notes').value.trim() || 'Resuelto.';
+        const withSig = document.getElementById('close-with-sig').checked;
+        let payload = { resolution_notes: notes };
+
+        if (withSig) {
+            if (SigPad.isEmpty()) { toast('Firmá antes de cerrar, o desactivá la firma', 'warning'); return; }
+            payload.technician_signature = SigPad.canvas.toDataURL('image/png');
+        }
+
+        const btn = document.getElementById('close-confirm-btn');
+        if (btn) { btn.disabled = true; btn.textContent = 'Cerrando...'; }
         try {
-            await api.closeTicket(ticketId, { technician_signature:sig, resolution_notes:notes });
+            await api.closeTicket(ticketId, payload);
+            closeModal('modal-close');
+            toast('Ticket cerrado', 'success');
+            await this.loadDashboard();
+            await this.loadTickets();
+            await this.loadAllTickets();
+        } catch(e) {
+            toast('Error: ' + e.message, 'error');
+        } finally {
+            if (btn) { btn.disabled = false; btn.textContent = 'Cerrar ticket'; }
+        }
+    },
+
+    // (legacy — mantenido por compatibilidad con SigPad.save)
+    async closeWithSig(ticketId, sig) {
+        try {
+            await api.closeTicket(ticketId, { technician_signature:sig, resolution_notes:'Resuelto.' });
             closeModal('modal-signature');
             toast('Ticket cerrado','success');
             await this.loadDashboard();
@@ -795,7 +831,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Modal overlay click
     document.querySelectorAll('.modal-overlay').forEach(m => {
         m.addEventListener('click', e => {
-            if (e.target === m && m.id !== 'modal-success' && m.id !== 'modal-signature') {
+            if (e.target === m && m.id !== 'modal-success' && m.id !== 'modal-close') {
                 m.classList.remove('open');
             }
         });
