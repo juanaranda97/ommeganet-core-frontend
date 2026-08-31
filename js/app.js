@@ -73,6 +73,7 @@ const App = {
 
         this.updateUserUI();
         this.showRoleItems();
+        this.restoreImpersonation();
         await this.loadConfig();
         await Wizard.init();
         await this.loadDashboard();
@@ -108,6 +109,52 @@ const App = {
 
     isPlatform() {
         return this.state.context?.is_platform_user === true;
+    },
+
+    // ============================================================
+    // ORGANIZACIONES (multi-tenant)
+    // ============================================================
+    loadOrganizations() {
+        if (typeof Orgs !== 'undefined') Orgs.load();
+    },
+
+    // Banner cuando Ommeganet está viendo datos de otra org
+    showImpersonationBanner(orgName) {
+        let banner = document.getElementById('impersonation-banner');
+        if (!banner) {
+            banner = document.createElement('div');
+            banner.id = 'impersonation-banner';
+            banner.className = 'impersonation-banner';
+            document.body.appendChild(banner);
+        }
+        banner.innerHTML = `
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <span>Estás viendo: <strong>${escHtml(orgName)}</strong></span>
+            <button onclick="App.exitImpersonation()">Salir</button>`;
+        banner.classList.add('show');
+        document.body.classList.add('has-impersonation');
+    },
+
+    exitImpersonation() {
+        api.clearActiveOrg();
+        localStorage.removeItem('impersonating');
+        const banner = document.getElementById('impersonation-banner');
+        if (banner) banner.classList.remove('show');
+        document.body.classList.remove('has-impersonation');
+        toast('Volviste a tu vista de Ommeganet', 'success');
+        switchView('dashboard');
+        this.loadDashboard();
+    },
+
+    // Restaurar impersonation si venía de una sesión anterior
+    restoreImpersonation() {
+        try {
+            const saved = JSON.parse(localStorage.getItem('impersonating') || 'null');
+            if (saved && saved.id) {
+                api.setActiveOrg(saved.id, null);
+                this.showImpersonationBanner(saved.name);
+            }
+        } catch {}
     },
 
     isTech() {
