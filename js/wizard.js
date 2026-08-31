@@ -42,7 +42,7 @@ const Wizard = {
         el.innerHTML = this.categories.map(c => `
             <div class="cat-card" data-id="${c.id}" onclick="Wizard.selectCat(${c.id})">
                 <div class="cat-icon" style="background:${c.color || 'rgba(139,92,246,.12)'}">
-                    <span style="font-size:18px">${c.icon || '🔧'}</span>
+                    ${iconHTML(c.icon)}
                 </div>
                 <div class="cat-name">${escHtml(c.name)}</div>
             </div>`).join('');
