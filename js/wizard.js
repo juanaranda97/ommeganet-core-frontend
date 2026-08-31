@@ -13,7 +13,27 @@ const Wizard = {
             this.locations  = await api.getLocations();
             this.renderCats();
             this.renderLocs();
+            this.prefillRequester();
         } catch(e) { console.error('Wizard init:', e); }
+    },
+
+    // Precarga datos del solicitante (nombre, CI). Si ya tiene CI, el campo queda bloqueado.
+    prefillRequester() {
+        const u = App.state.user || {};
+        const ciField = document.getElementById('ticket-ci');
+        if (ciField) {
+            if (u.ci && String(u.ci).trim().length >= 4) {
+                ciField.value = u.ci;
+                ciField.disabled = true;
+                ciField.title = 'Tomado de tu perfil';
+                const hint = document.getElementById('ci-hint');
+                if (hint) hint.textContent = 'Tomado de tu perfil';
+            } else {
+                ciField.disabled = false;
+                const hint = document.getElementById('ci-hint');
+                if (hint) hint.textContent = 'Necesario para registrar el ticket';
+            }
+        }
     },
 
     renderCats() {
@@ -47,9 +67,14 @@ const Wizard = {
         }
         if (step === 2) {
             const t = document.getElementById('ticket-title')?.value.trim() || '';
-            const d = document.getElementById('ticket-desc')?.value.trim()  || '';
             if (t.length < 3)  { toast('El título es muy corto', 'warning'); return; }
-            if (d.length < 10) { toast('La descripción debe tener al menos 10 caracteres', 'warning'); return; }
+            // Descripción ahora es OPCIONAL — no se valida longitud
+            // CI: si el usuario no lo tiene en el perfil, es obligatorio acá
+            const ciField = document.getElementById('ticket-ci');
+            if (ciField && !ciField.disabled) {
+                const ci = ciField.value.trim();
+                if (ci.length < 4) { toast('Ingresá tu CI para continuar', 'warning'); ciField.focus(); return; }
+            }
         }
         if (step === 3) this.fillSummary();
         this.goto(step + 1);
@@ -86,8 +111,9 @@ const Wizard = {
 
         // Auto-data
         const u = App.state.user;
+        const ci = document.getElementById('ticket-ci')?.value.trim() || u?.ci || '-';
         document.getElementById('auto-datetime').textContent = new Date().toLocaleString('es-PY');
-        document.getElementById('auto-user').textContent     = u?.full_name || u?.email || '-';
+        document.getElementById('auto-user').textContent     = `${u?.full_name || u?.email || '-'}${ci && ci!=='-' ? ` · CI ${ci}` : ''}`;
         document.getElementById('auto-device').textContent   = `${Media.getDevice().device_type} · ${Media.getDevice().device_os}`;
         document.getElementById('auto-gps').textContent      = Media.gps
             ? `${Media.gps.gps_latitude.toFixed(4)}, ${Media.gps.gps_longitude.toFixed(4)}`
@@ -98,18 +124,31 @@ const Wizard = {
         const btn = document.getElementById('wizard-submit');
         if (btn) { btn.disabled = true; btn.textContent = 'Enviando...'; }
         try {
+            const ciVal = document.getElementById('ticket-ci')?.value.trim() || null;
             const data = {
                 title:           document.getElementById('ticket-title')?.value.trim(),
-                description:     document.getElementById('ticket-desc')?.value.trim(),
+                description:     document.getElementById('ticket-desc')?.value.trim() || null,
                 category_id:     parseInt(document.getElementById('hidden-cat').value),
                 priority:        document.querySelector('input[name="priority"]:checked')?.value || 'media',
                 location_id:     parseInt(document.getElementById('ticket-location-id')?.value) || null,
                 location:        document.getElementById('ticket-location-detail')?.value.trim() || null,
                 assistance_type: document.getElementById('ticket-assistance-type')?.value,
                 requester_phone: document.getElementById('ticket-phone')?.value.trim() || null,
+                requester_ci:    ciVal,
                 ...Media.getDevice(),
                 ...(Media.gps || {}),
             };
+
+            // Si el usuario ingresó un CI nuevo (no lo tenía en el perfil), lo guardamos
+            const ciField = document.getElementById('ticket-ci');
+            if (ciField && !ciField.disabled && ciVal && (!App.state.user?.ci)) {
+                try {
+                    await api.updateMe({ ci: ciVal });
+                    App.state.user.ci = ciVal;
+                    localStorage.setItem('user', JSON.stringify(App.state.user));
+                } catch (e) { /* no bloquear el ticket si falla guardar el CI */ }
+            }
+
             const ticket = await api.createTicket(data);
 
             // Upload files
