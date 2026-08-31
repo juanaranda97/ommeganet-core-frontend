@@ -663,6 +663,27 @@ function setText(id, value) {
     if (el) el.textContent = value;
 }
 
+// Convierte un valor de ícono en HTML: emoji tal cual, o ícono Tabler si es un nombre
+function iconHTML(icon) {
+    if (!icon) return '<i class="ti ti-tool" style="font-size:20px;"></i>';
+    // Si contiene caracteres no-ASCII (emoji), lo mostramos como texto
+    if (/[^\u0000-\u007f]/.test(icon)) {
+        return `<span style="font-size:20px; line-height:1;">${icon}</span>`;
+    }
+    // Mapa de nombres legacy/comunes a íconos Tabler válidos
+    const map = {
+        'key':'key', 'camera':'camera', 'mail':'mail', 'monitor':'device-desktop',
+        'hardware':'device-desktop', 'help-circle':'help', 'help':'help', 'otro':'help',
+        'wifi':'wifi', 'redes':'network', 'server':'server', 'servidores':'server',
+        'package':'package', 'software':'package', 'phone':'phone', 'telefonia':'phone',
+        'tool':'tool', 'printer':'printer', 'lock':'lock', 'cloud':'cloud',
+        'database':'database', 'mobile':'device-mobile', 'user':'user', 'settings':'settings',
+    };
+    const raw = String(icon).replace(/^ti-/, '').trim().toLowerCase();
+    const name = map[raw] || raw;
+    return `<i class="ti ti-${name}" style="font-size:20px;"></i>`;
+}
+
 function escHtml(s) {
     return String(s||'')
         .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
@@ -786,6 +807,9 @@ document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('.stab,.spanel').forEach(x => x.classList.remove('active'));
             t.classList.add('active');
             document.querySelector(`.spanel[data-tab="${t.dataset.tab}"]`)?.classList.add('active');
+            // El botón "Guardar configuración" no aplica a la pestaña Categorías (tiene sus propias acciones)
+            const saveRow = document.querySelector('.settings-save-row');
+            if (saveRow) saveRow.style.display = (t.dataset.tab === 'categorias') ? 'none' : 'flex';
         });
     });
 
