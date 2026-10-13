@@ -222,6 +222,9 @@ const App = {
     },
 
     renderCharts(stats) {
+        // Si la librería de gráficos no cargó (CDN bloqueado/offline), no rompemos
+        // el dashboard: simplemente se omiten los gráficos.
+        if (typeof Chart === 'undefined') { console.warn('Chart.js no disponible; se omiten gráficos'); return; }
         const ctxS = document.getElementById('chart-status');
         if (ctxS) {
             this.state.charts.status?.destroy();
@@ -625,7 +628,7 @@ function switchView(view) {
     const titles = {
         dashboard:'Inicio', 'new-ticket':'Nueva solicitud', tickets:'Mis tickets',
         'all-tickets':'Cola de tickets', users:'Usuarios', reports:'Reportes',
-        settings:'Configuración', organizations:'Organizaciones',
+        settings:'Configuración', organizations:'Organizaciones', inventory:'Inventario',
     };
     setText('page-title', titles[view]||view);
 
@@ -635,6 +638,7 @@ function switchView(view) {
     if (view==='users')        App.loadUsers();
     if (view==='settings')     App.loadSettings();
     if (view==='organizations') App.loadOrganizations?.();
+    if (view==='inventory' && typeof Inventory!=='undefined') Inventory.load(true);
 
     document.getElementById('sidebar')?.classList.remove('open');
     document.getElementById('notif-panel')?.classList.remove('open');

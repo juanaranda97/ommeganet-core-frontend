@@ -23,5 +23,8 @@ const CONFIG = {
     REQUEST_TIMEOUT_MS: 65000,     // timeout total del request
 };
 
-// Cliente Supabase (para auth + storage directo)
-const supabaseClient = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+// Cliente Supabase (para auth + storage directo). Guardado: si el SDK no cargó
+// (CDN bloqueado/offline), no rompemos la app — no se usa para datos.
+const supabaseClient = (typeof supabase !== 'undefined' && supabase.createClient)
+    ? supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY)
+    : null;

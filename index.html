@@ -468,8 +468,39 @@
 
       <!-- ========== PLACEHOLDER VIEWS (próximas entregas) ========== -->
       <section id="view-inventory" class="view">
-        <div style="margin-bottom:20px;"><h1>Inventario</h1><div class="page-sub">Equipos y activos</div></div>
-        <div class="card"><div class="empty"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/></svg><h3>Módulo en construcción</h3><p>El inventario de equipos llega en la próxima entrega (D).</p></div></div>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;flex-wrap:wrap;gap:14px;">
+          <div><h1>Inventario</h1><div class="page-sub">Gestión de activos (ITAM)</div></div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button class="btn btn-ghost btn-sm" onclick="Inventory.exportData()">↓ Exportar</button>
+            <button class="btn btn-primary" onclick="Inventory.openForm()">+ Nuevo activo</button>
+          </div>
+        </div>
+
+        <!-- KPIs -->
+        <div class="kpi-grid">
+          <div class="kpi kpi-violet"><div class="kpi-label">Total activos</div><div class="kpi-value" id="inv-k-total">0</div></div>
+          <div class="kpi kpi-cyan"><div class="kpi-label">Asignados</div><div class="kpi-value" id="inv-k-asignados">0</div></div>
+          <div class="kpi kpi-green"><div class="kpi-label">Disponibles</div><div class="kpi-value" id="inv-k-disponibles">0</div></div>
+          <div class="kpi kpi-amber"><div class="kpi-label">En reparación</div><div class="kpi-value" id="inv-k-reparacion">0</div></div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="filters-bar" style="margin-top:18px;">
+          <div class="search-bar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input id="inv-search" placeholder="Buscar código, serie, modelo, marca..." oninput="Inventory.debouncedSearch()"></div>
+          <select class="filter-select" id="inv-f-tipo" onchange="Inventory.load()"><option value="">Tipo</option></select>
+          <select class="filter-select" id="inv-f-estado" onchange="Inventory.load()"><option value="">Estado</option></select>
+          <select class="filter-select" id="inv-f-branch" onchange="Inventory.load()"><option value="">Sucursal</option></select>
+          <input class="filter-select" id="inv-f-serial" placeholder="N° de serie" oninput="Inventory.debouncedSearch()" style="min-width:140px;">
+        </div>
+
+        <div class="card" style="padding:0;margin-top:14px;">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Código</th><th>Tipo</th><th>Marca / Modelo</th><th>N° Serie</th><th>Estado</th><th>Asignado a</th><th>Ubicación</th></tr></thead>
+              <tbody id="inv-tbody"></tbody>
+            </table>
+          </div>
+        </div>
       </section>
       <section id="view-licenses" class="view">
         <div style="margin-bottom:20px;"><h1>Licencias</h1><div class="page-sub">Software y suscripciones</div></div>
@@ -789,6 +820,61 @@
 <div class="toast-container" id="toast-container"></div>
 
 <!-- ============ SCRIPTS ============ -->
+<!-- ============ MODAL: INVENTARIO — FORM ============ -->
+<div class="modal-overlay" id="modal-inv-form">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="inv-form-title">Nuevo activo</h2>
+      <button class="icon-btn" onclick="closeModal('modal-inv-form')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <form id="inv-form" onsubmit="event.preventDefault(); Inventory.save();">
+      <div class="modal-body" id="inv-form-body"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('modal-inv-form')">Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="inv-save-btn">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============ MODAL: INVENTARIO — DETALLE ============ -->
+<div class="modal-overlay" id="modal-inv-detail">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="inv-detail-title">Ficha del activo</h2>
+      <button class="icon-btn" onclick="closeModal('modal-inv-detail')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body" id="inv-detail-body"></div>
+  </div>
+</div>
+
+<!-- ============ MODAL: INVENTARIO — ASIGNAR ============ -->
+<div class="modal-overlay" id="modal-inv-assign">
+  <div class="modal sm">
+    <div class="modal-header">
+      <h2>Asignar activo</h2>
+      <button class="icon-btn" onclick="closeModal('modal-inv-assign')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <form id="inv-assign-form" onsubmit="event.preventDefault(); Inventory.doAssign();">
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Usuario <span class="req">*</span></label>
+          <select id="inv-assign-user" required></select>
+          <div class="form-hint">El usuario debe pertenecer a la misma organización del activo.</div>
+        </div>
+        <div class="form-group">
+          <label>Notas</label>
+          <input type="text" id="inv-assign-notas" placeholder="Opcional">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('modal-inv-assign')">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Asignar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -801,6 +887,7 @@
 <script src="js/organizations.js"></script>
 <script src="js/categories.js"></script>
 <script src="js/export.js"></script>
+<script src="js/inventory.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

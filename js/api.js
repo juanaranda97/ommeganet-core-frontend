@@ -217,6 +217,20 @@ class APIClient {
     async getNotifications()           { return this.request('/notifications/'); }
     async markRead(id)                 { return this.request(`/notifications/${id}/read`, { method:'PATCH' }); }
     async markAllRead()                { return this.request('/notifications/read-all', { method:'PATCH' }); }
+
+    // ============================================================
+    // INVENTARIO (ITAM)
+    // ============================================================
+    async getInventoryStats()          { return this.request('/inventory/stats'); }
+    async getInventoryMeta()           { return this.request('/inventory/meta'); }
+    async getInventory(f={})           { return this.request(`/inventory/${qs(f)}`); }
+    async getAsset(id)                 { return this.request(`/inventory/${id}`); }
+    async createAsset(data)            { return this.request('/inventory/', { method:'POST', body:JSON.stringify(data) }); }
+    async updateAsset(id, data)        { return this.request(`/inventory/${id}`, { method:'PATCH', body:JSON.stringify(data) }); }
+    async assignAsset(id, data)        { return this.request(`/inventory/${id}/assign`, { method:'POST', body:JSON.stringify(data) }); }
+    async returnAsset(id, data)        { return this.request(`/inventory/${id}/return`, { method:'POST', body:JSON.stringify(data||{}) }); }
+    async getAssetAssignments(id)      { return this.request(`/inventory/${id}/assignments`); }
+    async getAssignableUsers()         { return this.request('/inventory/assignable-users'); }
 }
 
 function qs(filters) {
