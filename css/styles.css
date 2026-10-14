@@ -1103,3 +1103,28 @@ body.has-impersonation .sidebar { padding-top:52px; }
 @media (max-width:640px) {
   .icon-picker-grid { grid-template-columns:repeat(6, 1fr); }
 }
+
+/* ============================================================
+   ITAM-02 — Formulario de activos (scoped a Inventario)
+   Corrige el desplazamiento del modal y el checkbox "Tiene auricular".
+   No afecta a otros modales.
+   ============================================================ */
+#modal-inv-form .modal { max-height: 90dvh; }
+#inv-form { display:flex; flex-direction:column; min-height:0; flex:1 1 auto; overflow:hidden; }
+#inv-form .modal-body { flex:1 1 auto; min-height:0; overflow-y:auto; scrollbar-width:thin; }
+#inv-form .modal-footer { flex:0 0 auto; }
+
+/* Checkbox real y alineado (el input global los volvía barras) */
+#inv-form input[type="checkbox"]{
+  width:18px; height:18px; min-width:18px; padding:0; margin:0;
+  appearance:auto; -webkit-appearance:checkbox;
+  accent-color:var(--violet); cursor:pointer; vertical-align:middle;
+}
+#inv-form .check-row{ display:flex; align-items:center; gap:10px; }
+#inv-form .check-row label{ margin:0; cursor:pointer; }
+
+/* Secciones del formulario */
+#inv-form .form-section{ border:1px solid var(--border-0); border-radius:var(--r-md); padding:14px; margin-bottom:14px; }
+#inv-form .form-section > .sec-title{ font-weight:700; font-size:13px; margin:0 0 12px; color:var(--text-1); letter-spacing:.3px; text-transform:uppercase; }
+#inv-form .req{ color:var(--red,#f87171); }
+#inv-form .field-err{ color:var(--red,#f87171); font-size:11px; margin-top:4px; }

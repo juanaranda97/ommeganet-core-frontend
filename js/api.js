@@ -230,7 +230,22 @@ class APIClient {
     async assignAsset(id, data)        { return this.request(`/inventory/${id}/assign`, { method:'POST', body:JSON.stringify(data) }); }
     async returnAsset(id, data)        { return this.request(`/inventory/${id}/return`, { method:'POST', body:JSON.stringify(data||{}) }); }
     async getAssetAssignments(id)      { return this.request(`/inventory/${id}/assignments`); }
-    async getAssignableUsers()         { return this.request('/inventory/assignable-users'); }
+    async getAssignableUsers(companyId=null, search=null) {
+        const p = new URLSearchParams();
+        if (companyId) p.set('company_id', companyId);
+        if (search)    p.set('search', search);
+        const qs = p.toString();
+        return this.request(`/inventory/assignable-users${qs ? `?${qs}` : ''}`);
+    }
+    // Selectores dependientes de pertenencia
+    async getInvOrganizations()        { return this.request('/inventory/organizations'); }
+    async getInvCompanies(orgId)       { return this.request(`/inventory/companies?organization_id=${orgId}`); }
+    async getInvDepartments(companyId) { return this.request(`/inventory/departments?company_id=${companyId}`); }
+    async getInvBranches(orgId, companyId=null) {
+        const q = companyId ? `&company_id=${companyId}` : '';
+        return this.request(`/inventory/branches?organization_id=${orgId}${q}`);
+    }
+    async getInvLocations(branchId)    { return this.request(`/inventory/locations?branch_id=${branchId}`); }
 }
 
 function qs(filters) {

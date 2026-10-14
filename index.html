@@ -487,6 +487,9 @@
         <!-- Filtros -->
         <div class="filters-bar" style="margin-top:18px;">
           <div class="search-bar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input id="inv-search" placeholder="Buscar código, serie, modelo, marca..." oninput="Inventory.debouncedSearch()"></div>
+          <select class="filter-select" id="inv-f-org" onchange="Inventory.onFilterOrgChange()" style="display:none;"><option value="">Organización</option></select>
+          <select class="filter-select" id="inv-f-company" onchange="Inventory.onFilterCompanyChange()"><option value="">Empresa</option></select>
+          <select class="filter-select" id="inv-f-department" onchange="Inventory.load()"><option value="">Departamento</option></select>
           <select class="filter-select" id="inv-f-tipo" onchange="Inventory.load()"><option value="">Tipo</option></select>
           <select class="filter-select" id="inv-f-estado" onchange="Inventory.load()"><option value="">Estado</option></select>
           <select class="filter-select" id="inv-f-branch" onchange="Inventory.load()"><option value="">Sucursal</option></select>
@@ -496,7 +499,7 @@
         <div class="card" style="padding:0;margin-top:14px;">
           <div class="table-wrap">
             <table>
-              <thead><tr><th>Código</th><th>Tipo</th><th>Marca / Modelo</th><th>N° Serie</th><th>Estado</th><th>Asignado a</th><th>Ubicación</th></tr></thead>
+              <thead><tr><th>Código</th><th>Tipo</th><th>Marca / Modelo</th><th>N° Serie</th><th>Empresa</th><th>Depto</th><th>Estado</th><th>Responsable</th><th>Sucursal</th></tr></thead>
               <tbody id="inv-tbody"></tbody>
             </table>
           </div>
