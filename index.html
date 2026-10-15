@@ -602,6 +602,21 @@
 </div>
 
 <!-- ============ MODAL: TICKET DETAIL ============ -->
+<!-- ========== MODAL EDITAR USUARIO (CORE-USERS-01) ========== -->
+<div class="modal-overlay" id="modal-user">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modal-user-title" style="margin:0;">Editar usuario</h2>
+      <button class="icon-btn" onclick="closeModal('modal-user')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body" id="modal-user-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-user')">Cancelar</button>
+      <button class="btn btn-primary" id="user-save-btn" onclick="App.saveUser()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-ticket">
   <div class="modal">
     <div class="modal-header">

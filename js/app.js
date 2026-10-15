@@ -469,38 +469,235 @@ const App = {
     // ============================================================
     // USERS
     // ============================================================
+    ROLE_LABELS: {
+        platform_owner:'Platform Owner', platform_admin:'Platform Admin', superadmin:'Platform Owner',
+        org_owner:'Org Owner', org_admin:'Org Admin', admin:'Org Admin',
+        company_admin:'Company Admin', manager:'Manager', supervisor:'Supervisor',
+        tecnico:'Técnico', rrhh:'RRHH', usuario:'Usuario',
+    },
+    roleLabel(r){ return this.ROLE_LABELS[r] || r || '—'; },
+    roleBadge(r){
+        // Muestra el rol REAL tal como lo devuelve el backend (incl. platform_owner),
+        // sin defaults engañosos. Color por familia.
+        const plat = ['platform_owner','platform_admin','superadmin'].includes(r);
+        const orga = ['org_owner','org_admin','admin','company_admin'].includes(r);
+        const c = plat ? '#a78bfa' : (orga ? '#22d3ee' : '#94a3b8');
+        return `<span class="badge" style="background:${c}22;color:${c};border:1px solid ${c}55;">${escHtml(this.roleLabel(r))}</span>`;
+    },
+
     async loadUsers() {
         try {
             const users = await api.getUsers();
+            this.state.usersById = {};
             const tbody = document.getElementById('users-tbody');
             if (!tbody) return;
-            tbody.innerHTML = users.map(u => `
+            tbody.innerHTML = users.map(u => {
+                this.state.usersById[u.id] = u;
+                const self = u.id===this.state.user?.id;
+                return `
                 <tr>
                     <td><div class="row-avatar-cell"><div class="avatar sm">${(u.full_name||'U').charAt(0).toUpperCase()}</div>${escHtml(u.full_name||'')}</div></td>
                     <td style="font-size:12px;color:var(--text-2)">${escHtml(u.email||'')}</td>
                     <td style="font-size:12px">${escHtml(u.department||'-')}</td>
-                    <td>
-                        <select onchange="App.changeRole('${u.id}',this.value)" ${u.id===this.state.user?.id?'disabled':''} style="width:auto;padding:5px 28px 5px 10px;font-size:12px;">
-                            ${['usuario','tecnico','supervisor','admin','rrhh'].map(r=>`<option ${u.role===r?'selected':''}>${r}</option>`).join('')}
-                        </select>
-                    </td>
-                    <td><span class="user-status ${u.estado_laboral||'activo'}"><span class="us-dot"></span>${u.estado_laboral||'activo'}</span></td>
-                    <td>
-                        <button class="btn btn-ghost btn-sm" onclick="App.toggleUser('${u.id}')" ${u.id===this.state.user?.id?'disabled':''}>
+                    <td>${this.roleBadge(u.role)}</td>
+                    <td><span class="user-status ${escHtml(u.estado_laboral||'activo')}"><span class="us-dot"></span>${escHtml(u.estado_laboral||'activo')}</span></td>
+                    <td style="white-space:nowrap;">
+                        <button class="btn btn-ghost btn-sm" onclick="App.openUserEdit('${escHtml(u.id)}')">Editar</button>
+                        <button class="btn btn-ghost btn-sm" onclick="App.toggleUser('${escHtml(u.id)}')" ${self?'disabled title="No podés desactivarte a vos mismo"':''}>
                             ${u.is_active!==false?'Desactivar':'Activar'}
                         </button>
                     </td>
-                </tr>`).join('');
+                </tr>`;
+            }).join('');
         } catch(e) { toast('Error cargando usuarios: '+e.message,'error'); }
     },
 
-    async changeRole(uid, role)  {
-        try { await api.changeUserRole(uid, role); toast('Rol actualizado','success'); }
-        catch(e) { toast('Error: '+e.message,'error'); }
-    },
     async toggleUser(uid) {
         try { await api.toggleUserActive(uid); await this.loadUsers(); }
-        catch(e) { toast('Error: '+e.message,'error'); }
+        catch(e) { toast('Error: '+(e.message||'no autorizado'),'error'); }
+    },
+
+    // ---- Modal editar usuario (CORE-USERS-01) ----
+    async openUserEdit(uid) {
+        const u = (this.state.usersById||{})[uid];
+        if (!u) return;
+        // token de secuencia para evitar que respuestas tardías pisen selecciones nuevas
+        const token = (this.state.userFormToken = (this.state.userFormToken||0) + 1);
+        this.state.userEdit = { id: uid, self: uid===this.state.user?.id, pertenenciaLoaded: true };
+        const roles = await api.getAssignableRoles().then(r=>r.roles||[]).catch(()=>[]);
+        // Fix carrera: si mientras esperábamos se abrió OTRO usuario, abortar -> el
+        // formulario renderizado siempre corresponde a this.state.userEdit.id.
+        if (token !== this.state.userFormToken) return;
+        // El rol actual siempre debe figurar (aunque el actor no pueda otorgarlo).
+        const roleOpts = Array.from(new Set([u.role, ...roles]));
+        const self = uid===this.state.user?.id;
+        const sel = (v,cur)=> String(v)===String(cur)?'selected':'';
+        document.getElementById('modal-user-body').innerHTML = `
+            <div class="form-group"><label>Nombre y apellido</label>
+              <input id="uf-full_name" value="${escHtml(u.full_name||'')}"></div>
+            <div class="form-group"><label>Email</label>
+              <input value="${escHtml(u.email||'')}" disabled></div>
+            <div class="form-row">
+              <div class="form-group"><label>Organización</label>
+                <select id="uf-org" onchange="App.onUserOrgChange()"><option value="">—</option></select></div>
+              <div class="form-group"><label>Empresa</label>
+                <select id="uf-company" onchange="App.onUserCompanyChange()"><option value="">—</option></select></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>Departamento</label>
+                <select id="uf-department" style="display:none;"><option value="">—</option></select>
+                <input id="uf-department-text" placeholder="Departamento (texto)" style="display:none;" value="${escHtml(u.department||'')}"></div>
+              <div class="form-group"><label>Rol ${self?'<span style="color:var(--text-2)">(no editable: sos vos)</span>':''}</label>
+                <select id="uf-role" ${self?'disabled':''}>${roleOpts.map(r=>`<option value="${escHtml(r)}" ${sel(r,u.role)}>${escHtml(this.roleLabel(r))}</option>`).join('')}</select></div>
+            </div>
+            <div class="form-group"><label>Estado laboral</label>
+              <select id="uf-estado" ${self?'disabled':''}>
+                ${['activo','suspendido','baja'].map(s=>`<option value="${s}" ${sel(s,u.estado_laboral||'activo')}>${s}</option>`).join('')}</select></div>
+            <p id="uf-error" style="color:#f87171;font-size:13px;margin:6px 0 0;display:none;"></p>`;
+        openModal('modal-user');
+        // Cargar selectores dependientes. Si FALLA la carga de catálogos, NO se asumen
+        // selectores vacíos como "sin pertenencia": se marca pertenenciaLoaded=false,
+        // se bloquean esos campos y saveUser NO enviará cambios de org/empresa/depto
+        // (se conservan los valores originales).
+        let pertenenciaLoaded = true;
+        try {
+            const orgs = await api.getUserOrgOptions();
+            if (token !== this.state.userFormToken) return;
+            fillSel('uf-org', orgs, u.organization_id);
+            if (u.organization_id) {
+                const comps = await api.getUserCompanyOptions(u.organization_id);
+                if (token !== this.state.userFormToken) return;
+                fillSel('uf-company', comps, u.company_id);
+                if (u.company_id) {
+                    const deps = await api.getUserDepartmentOptions(u.company_id);
+                    if (token !== this.state.userFormToken) return;
+                    fillSel('uf-department', deps, u.department_id);
+                }
+            }
+        } catch(e) {
+            pertenenciaLoaded = false;
+        }
+        if (token !== this.state.userFormToken) return;
+        this.state.userEdit.pertenenciaLoaded = pertenenciaLoaded;
+        if (!pertenenciaLoaded) {
+            ['uf-org','uf-company','uf-department','uf-department-text'].forEach(id => {
+                const el = document.getElementById(id); if (el) el.disabled = true;
+            });
+            const err = document.getElementById('uf-error');
+            if (err) { err.style.display='block';
+                err.textContent = 'No se pudieron cargar organizaciones/empresas. La pertenencia quedó bloqueada y no se modificará al guardar.'; }
+        }
+        this.updateDeptField();
+    },
+
+    // Con empresa -> selector de departamentos estructurados. Sin empresa (p.ej.
+    // administrativos globales) -> campo de texto legacy editable, sin empresa ficticia.
+    updateDeptField() {
+        const hasCompany = !!uval('uf-company');
+        const sel = document.getElementById('uf-department');
+        const txt = document.getElementById('uf-department-text');
+        if (!sel || !txt) return;
+        sel.style.display = hasCompany ? '' : 'none';
+        txt.style.display = hasCompany ? 'none' : '';
+    },
+
+    // Bloquea/permite el guardado de PERTENENCIA ante errores de carga de catálogos.
+    // No convierte un fallo en lista vacía (que provocaría desvinculaciones accidentales).
+    _pertFail(msg) {
+        if (this.state.userEdit) this.state.userEdit.pertenenciaLoaded = false;
+        ['uf-company','uf-department','uf-department-text'].forEach(id => {
+            const el = document.getElementById(id); if (el) el.disabled = true;
+        });
+        const err = document.getElementById('uf-error');
+        if (err) { err.style.display='block'; err.textContent = msg; }
+    },
+    _pertOk() {
+        if (this.state.userEdit) this.state.userEdit.pertenenciaLoaded = true;
+        ['uf-company','uf-department','uf-department-text'].forEach(id => {
+            const el = document.getElementById(id); if (el) el.disabled = false;
+        });
+        const err = document.getElementById('uf-error');
+        if (err && (err.textContent||'').toLowerCase().indexOf('pertenencia') >= 0) {
+            err.style.display='none'; err.textContent='';
+        }
+    },
+
+    async onUserOrgChange() {
+        const token = (this.state.userFormToken = (this.state.userFormToken||0) + 1);
+        const org = uval('uf-org');
+        fillSel('uf-company', [], ''); fillSel('uf-department', [], '');
+        this.updateDeptField();
+        if (!org) { this._pertOk(); return; }
+        let comps;
+        try { comps = await api.getUserCompanyOptions(org); }
+        catch(e) {
+            if (token !== this.state.userFormToken) return;
+            this._pertFail('No se pudieron cargar las empresas. La pertenencia quedó bloqueada y no se modificará al guardar.');
+            return;
+        }
+        if (token !== this.state.userFormToken) return;
+        fillSel('uf-company', comps, '');
+        this.updateDeptField();
+        this._pertOk();
+    },
+    async onUserCompanyChange() {
+        const token = (this.state.userFormToken = (this.state.userFormToken||0) + 1);
+        const comp = uval('uf-company');
+        fillSel('uf-department', [], '');
+        this.updateDeptField();
+        if (!comp) { this._pertOk(); return; }
+        let deps;
+        try { deps = await api.getUserDepartmentOptions(comp); }
+        catch(e) {
+            if (token !== this.state.userFormToken) return;
+            this._pertFail('No se pudieron cargar los departamentos. La pertenencia quedó bloqueada y no se modificará al guardar.');
+            return;
+        }
+        if (token !== this.state.userFormToken) return;
+        fillSel('uf-department', deps, '');
+        this.updateDeptField();
+        this._pertOk();
+    },
+
+    async saveUser() {
+        const ue = this.state.userEdit; if (!ue) return;
+        const u = (this.state.usersById||{})[ue.id] || {};
+        const err = document.getElementById('uf-error');
+        const btn = document.getElementById('user-save-btn');
+        // Construir payload SOLO con los campos que cambiaron (update parcial seguro).
+        const payload = {};
+        const nz = v => (v==null ? '' : String(v));   // normaliza null/'' para comparar
+        const fn = uval('uf-full_name'); if (fn && fn !== u.full_name) payload.full_name = fn;
+        // Pertenencia: SOLO si los catálogos cargaron bien. Si fallaron, NO se envían
+        // cambios de org/empresa/departamento (se conservan los valores originales;
+        // nunca se manda organization_id/company_id/department implícito por selectores vacíos).
+        if (ue.pertenenciaLoaded !== false) {
+            const org = uval('uf-org') || null; if (nz(org)!==nz(u.organization_id)) payload.organization_id = org;
+            const comp = uval('uf-company') || null; if (nz(comp)!==nz(u.company_id)) payload.company_id = comp;
+            // Con empresa -> estructurado (department_id); sin empresa -> texto legacy.
+            if (comp) {
+                const dep = uval('uf-department') || null;
+                if (nz(dep)!==nz(u.department_id)) payload.department_id = dep;
+            } else {
+                const depTxt = uval('uf-department-text');
+                if (depTxt !== (u.department||'')) payload.department = depTxt || null;
+            }
+        }
+        if (!ue.self) {
+            const role = uval('uf-role'); if (role && role !== u.role) payload.role = role;
+            const est = uval('uf-estado'); if (est && est !== (u.estado_laboral||'activo')) payload.estado_laboral = est;
+        }
+        if (Object.keys(payload).length === 0) { closeModal('modal-user'); return; }
+        if (btn){ btn.disabled = true; btn.textContent='Guardando...'; }
+        try {
+            await api.updateUser(ue.id, payload);
+            closeModal('modal-user');
+            toast('Usuario actualizado','success');
+            await this.loadUsers();
+        } catch(e) {
+            if (err){ err.style.display='block'; err.textContent = e.message || 'No autorizado'; }
+            else toast('Error: '+e.message,'error');
+        } finally { if (btn){ btn.disabled=false; btn.textContent='Guardar'; } }
     },
 
     // ============================================================
@@ -692,6 +889,18 @@ function escHtml(s) {
     return String(s||'')
         .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
         .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// Valor de un input/select por id (trim). Helper usado por el modal de usuarios.
+function uval(id){ const el=document.getElementById(id); return el ? (el.value||'').trim() : ''; }
+
+// Rellena un <select> con opciones {id,name} + placeholder, preseleccionando `cur`.
+// Escapa valores y textos (XSS-safe).
+function fillSel(id, options, cur, placeholder='—'){
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerHTML = `<option value="">${escHtml(placeholder)}</option>` +
+        (options||[]).map(o => `<option value="${escHtml(o.id)}" ${String(o.id)===String(cur||'')?'selected':''}>${escHtml(o.name||o.id)}</option>`).join('');
 }
 
 function fmtDate(iso) {

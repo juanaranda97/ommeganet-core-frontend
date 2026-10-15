@@ -203,6 +203,11 @@ class APIClient {
     async getTechnicians()             { return this.request('/users/technicians'); }
     async changeUserRole(uid, role)    { return this.request(`/users/${uid}/role`, { method:'PATCH', body:JSON.stringify({role}) }); }
     async toggleUserActive(uid)        { return this.request(`/users/${uid}/toggle-active`, { method:'PATCH' }); }
+    async updateUser(uid, payload)     { return this.request(`/users/${uid}`, { method:'PATCH', body:JSON.stringify(payload) }); }
+    async getAssignableRoles()         { return this.request('/users/assignable-roles'); }
+    async getUserOrgOptions()          { return this.request('/users/org-options'); }
+    async getUserCompanyOptions(orgId) { return this.request(`/users/company-options?organization_id=${encodeURIComponent(orgId)}`); }
+    async getUserDepartmentOptions(companyId) { return this.request(`/users/department-options?company_id=${encodeURIComponent(companyId)}`); }
 
     // ============================================================
     // CONFIG
